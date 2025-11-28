@@ -1,0 +1,24 @@
+# Allow PATH_INFO to be passed to PHP scripts
+AcceptPathInfo On
+
+# Rewrite legacy /live/username/password/ID.ext to /live.php/username/password/ID.ext
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^live/([^/]+)/([^/]+)/([0-9]+)\.(ts|m3u8)$ live.php/$1/$2/$3.$4 [L,QSA]
+</IfModule>
+RewriteEngine On
+RewriteBase /xtream_server/
+
+# Handle TiviMate stream URLs - /live/username/password/streamid.ts
+RewriteRule ^live/([^/]+)/([^/]+)/([0-9]+)\.(m3u8|ts)$ live.php/$1/$2/$3.$4 [L,QSA]
+
+# Handle alternative stream format
+RewriteRule ^([^/]+)/([^/]+)/([0-9]+)\.(m3u8|ts)$ live.php/$1/$2/$3.$4 [L,QSA]
+
+# Protect data folder
+RewriteRule ^data/ - [F,L]
+
+# Handle API requests - pass everything else to player_api.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ player_api.php [QSA,L]

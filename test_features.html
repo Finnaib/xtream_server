@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinnTV - Live Feature Tester</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            color: #fff;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(0,0,0,0.3);
+            padding: 30px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+        h1 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: #fff;
+            text-shadow: 0 0 20px rgba(255,255,255,0.5);
+        }
+        .status {
+            text-align: center;
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            padding: 15px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+        }
+        .credentials {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .credentials input {
+            padding: 12px 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 10px;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 1rem;
+            min-width: 200px;
+        }
+        .credentials input::placeholder { color: rgba(255,255,255,0.6); }
+        .credentials button {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .credentials button:hover { transform: scale(1.05); }
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .test-card {
+            background: rgba(255,255,255,0.1);
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 15px;
+            padding: 20px;
+            transition: all 0.3s;
+        }
+        .test-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .test-card.loading { border-color: #ffd54f; }
+        .test-card.success { border-color: #4caf50; background: rgba(76, 175, 80, 0.1); }
+        .test-card.error { border-color: #f44336; background: rgba(244, 67, 54, 0.1); }
+        .test-card.new { border-color: #ff9800; background: rgba(255, 152, 0, 0.1); }
+        .test-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .test-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+        .badge-new { background: #ff9800; color: #000; }
+        .badge-old { background: #2196f3; color: #fff; }
+        .status-icon {
+            font-size: 2rem;
+            animation: spin 1s linear infinite;
+        }
+        .status-icon.success { animation: none; }
+        .status-icon.error { animation: none; }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .test-result {
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .test-url {
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            margin-top: 10px;
+            word-break: break-all;
+        }
+        .summary {
+            background: rgba(255,255,255,0.1);
+            padding: 25px;
+            border-radius: 15px;
+            margin-top: 30px;
+        }
+        .summary h2 {
+            margin-bottom: 20px;
+            color: #ffd54f;
+        }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        .summary-item {
+            background: rgba(0,0,0,0.3);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .summary-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .summary-value.success { color: #4caf50; }
+        .summary-value.error { color: #f44336; }
+        .summary-value.new { color: #ff9800; }
+        .feature-list {
+            margin-top: 20px;
+        }
+        .feature-item {
+            background: rgba(0,0,0,0.2);
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .btn-test-all {
+            display: block;
+            width: 100%;
+            max-width: 400px;
+            margin: 20px auto;
+            padding: 15px;
+            background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+            border: none;
+            border-radius: 15px;
+            color: #fff;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .btn-test-all:hover { transform: scale(1.05); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 FinnTV Live Feature Tester</h1>
+        <div class="status" id="mainStatus">Enter credentials and test your API features</div>
+
+        <div class="credentials">
+            <input type="text" id="username" placeholder="Username" value="finn">
+            <input type="password" id="password" placeholder="Password" value="finn123">
+            <button onclick="testAll()">🚀 Test All Features</button>
+        </div>
+
+        <div class="test-grid" id="testGrid"></div>
+
+        <div class="summary" id="summary" style="display: none;">
+            <h2>📊 Test Summary</h2>
+            <div class="summary-grid">
+                <div class="summary-item">
+                    <div class="summary-value success" id="successCount">0</div>
+                    <div>Successful Tests</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value error" id="errorCount">0</div>
+                    <div>Failed Tests</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value new" id="newCount">0</div>
+                    <div>New Features</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value" id="totalCount">0</div>
+                    <div>Total Tests</div>
+                </div>
+            </div>
+
+            <div class="feature-list" id="featureList"></div>
+        </div>
+    </div>
+
+    <script>
+        const baseUrl = window.location.origin + '/xtream_server';
+        
+        const tests = [
+            {
+                name: 'Authentication',
+                type: 'old',
+                endpoint: 'player_api.php',
+                params: {},
+                check: (data) => data.user_info && data.user_info.auth == 1
+            },
+            {
+                name: 'Live Categories',
+                type: 'old',
+                endpoint: 'player_api.php',
+                params: { action: 'get_live_categories' },
+                check: (data) => Array.isArray(data) && data.length > 0
+            },
+            {
+                name: 'Live Streams',
+                type: 'old',
+                endpoint: 'player_api.php',
+                params: { action: 'get_live_streams' },
+                check: (data) => Array.isArray(data) && data.length > 0
+            },
+            {
+                name: 'Short EPG',
+                type: 'new',
+                endpoint: 'player_api.php',
+                params: { action: 'get_short_epg', stream_id: '1001', limit: '4' },
+                check: (data) => data.epg_listings && Array.isArray(data.epg_listings)
+            },
+            {
+                name: 'Full EPG',
+                type: 'new',
+                endpoint: 'player_api.php',
+                params: { action: 'get_simple_data_table', stream_id: '1001' },
+                check: (data) => data.epg_listings && Array.isArray(data.epg_listings)
+            },
+            {
+                name: 'VOD Categories',
+                type: 'new',
+                endpoint: 'player_api.php',
+                params: { action: 'get_vod_categories' },
+                check: (data) => Array.isArray(data)
+            },
+            {
+                name: 'VOD Streams',
+                type: 'new',
+                endpoint: 'player_api.php',
+                params: { action: 'get_vod_streams' },
+                check: (data) => Array.isArray(data)
+            },
+            {
+                name: 'VOD Info',
+                type: 'new',
+                endpoint: 'player_api.php',
+                params: { action: 'get_vod_info', vod_id: '1' },
+                check: (data) => data.info || data.movie_data
+            },
+            {
+                name: 'Series Categories',
+                type: 'new',
+                endpoint: 'player_api.php',
+                params: { action: 'get_series_categories' },
+                check: (data) => Array.isArray(data)
+            },
+            {
+                name: 'Series List',
+                type: 'new',
+                endpoint: 'player_api.php',
+                params: { action: 'get_series' },
+                check: (data) => Array.isArray(data)
+            },
+            {
+                name: 'Series Info',
+                type: 'new',
+                endpoint: 'player_api.php',
+                params: { action: 'get_series_info', series_id: '1' },
+                check: (data) => data.seasons || data.info || data.episodes
+            },
+            {
+                name: 'XMLTV EPG',
+                type: 'new',
+                endpoint: 'xmltv.php',
+                params: {},
+                isXML: true,
+                check: (data) => data.includes('<?xml') && data.includes('<tv')
+            },
+            {
+                name: 'M3U Playlist',
+                type: 'old',
+                endpoint: 'get.php',
+                params: { type: 'm3u_plus', output: 'ts' },
+                isText: true,
+                check: (data) => data.includes('#EXTM3U')
+            }
+        ];
+
+        function createTestCard(test) {
+            return `
+                <div class="test-card" id="card-${test.name.replace(/\s+/g, '-')}">
+                    <div class="test-header">
+                        <div class="test-title">
+                            <span id="icon-${test.name.replace(/\s+/g, '-')}">⏳</span>
+                            ${test.name}
+                        </div>
+                        <span class="badge badge-${test.type}">${test.type.toUpperCase()}</span>
+                    </div>
+                    <div class="test-url" id="url-${test.name.replace(/\s+/g, '-')}">Waiting...</div>
+                    <div class="test-result" id="result-${test.name.replace(/\s+/g, '-')}" style="display:none;"></div>
+                </div>
+            `;
+        }
+
+        function initTests() {
+            const grid = document.getElementById('testGrid');
+            grid.innerHTML = tests.map(test => createTestCard(test)).join('');
+        }
+
+        async function runTest(test) {
+            const cardId = test.name.replace(/\s+/g, '-');
+            const card = document.getElementById(`card-${cardId}`);
+            const icon = document.getElementById(`icon-${cardId}`);
+            const urlDiv = document.getElementById(`url-${cardId}`);
+            const resultDiv = document.getElementById(`result-${cardId}`);
+
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            // Build URL
+            const params = new URLSearchParams({
+                username: username,
+                password: password,
+                ...test.params
+            });
+            const url = `${baseUrl}/${test.endpoint}?${params}`;
+
+            urlDiv.textContent = url;
+            card.className = 'test-card loading ' + (test.type === 'new' ? 'new' : '');
+            icon.textContent = '⏳';
+            icon.className = 'status-icon';
+
+            try {
+                const response = await fetch(url);
+                const contentType = response.headers.get('content-type');
+                
+                let data;
+                if (test.isXML || contentType?.includes('xml')) {
+                    data = await response.text();
+                } else if (test.isText || contentType?.includes('mpegurl') || contentType?.includes('m3u')) {
+                    data = await response.text();
+                } else {
+                    data = await response.json();
+                }
+
+                const success = test.check(data);
+
+                if (success) {
+                    card.className = 'test-card success ' + (test.type === 'new' ? 'new' : '');
+                    icon.textContent = '✅';
+                    icon.className = 'status-icon success';
+                    
+                    let preview;
+                    if (typeof data === 'string') {
+                        preview = data.substring(0, 500) + (data.length > 500 ? '...' : '');
+                    } else {
+                        preview = JSON.stringify(data, null, 2).substring(0, 500) + (JSON.stringify(data).length > 500 ? '...' : '');
+                    }
+                    
+                    resultDiv.textContent = preview;
+                    resultDiv.style.display = 'block';
+                    return { test: test.name, success: true, type: test.type };
+                } else {
+                    throw new Error('Check failed');
+                }
+            } catch (error) {
+                card.className = 'test-card error ' + (test.type === 'new' ? 'new' : '');
+                icon.textContent = '❌';
+                icon.className = 'status-icon error';
+                resultDiv.textContent = `Error: ${error.message}`;
+                resultDiv.style.display = 'block';
+                return { test: test.name, success: false, type: test.type };
+            }
+        }
+
+        async function testAll() {
+            document.getElementById('mainStatus').textContent = '🔄 Testing all features...';
+            document.getElementById('summary').style.display = 'none';
+
+            const results = [];
+            for (const test of tests) {
+                const result = await runTest(test);
+                results.push(result);
+                await new Promise(resolve => setTimeout(resolve, 300)); // Small delay between tests
+            }
+
+            // Calculate summary
+            const successCount = results.filter(r => r.success).length;
+            const errorCount = results.filter(r => !r.success).length;
+            const newCount = results.filter(r => r.type === 'new' && r.success).length;
+
+            document.getElementById('successCount').textContent = successCount;
+            document.getElementById('errorCount').textContent = errorCount;
+            document.getElementById('newCount').textContent = newCount;
+            document.getElementById('totalCount').textContent = results.length;
+
+            // Feature breakdown
+            const featureList = document.getElementById('featureList');
+            featureList.innerHTML = '<h3 style="margin-bottom: 15px;">Feature Status:</h3>';
+            
+            const categories = [
+                { name: '📺 Live TV', tests: results.filter(r => ['Authentication', 'Live Categories', 'Live Streams', 'M3U Playlist'].includes(r.test)) },
+                { name: '📅 EPG Features', tests: results.filter(r => ['Short EPG', 'Full EPG', 'XMLTV EPG'].includes(r.test)) },
+                { name: '🎬 VOD Features', tests: results.filter(r => ['VOD Categories', 'VOD Streams', 'VOD Info'].includes(r.test)) },
+                { name: '📺 Series Features', tests: results.filter(r => ['Series Categories', 'Series List', 'Series Info'].includes(r.test)) }
+            ];
+
+            categories.forEach(cat => {
+                const passed = cat.tests.filter(t => t.success).length;
+                const total = cat.tests.length;
+                const status = passed === total ? '✅' : passed > 0 ? '⚠️' : '❌';
+                
+                featureList.innerHTML += `
+                    <div class="feature-item">
+                        <div>${status} ${cat.name}</div>
+                        <div><strong>${passed}/${total}</strong> working</div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('summary').style.display = 'block';
+            
+            if (newCount > 0) {
+                document.getElementById('mainStatus').innerHTML = `
+                    🎉 <strong>SUCCESS!</strong> Found ${newCount} new modern features working!
+                `;
+            } else if (successCount > 0) {
+                document.getElementById('mainStatus').innerHTML = `
+                    ⚠️ Basic features working (${successCount}/${results.length}), but missing modern features
+                `;
+            } else {
+                document.getElementById('mainStatus').innerHTML = `
+                    ❌ Tests failed - check credentials and server configuration
+                `;
+            }
+        }
+
+        // Initialize on load
+        window.onload = initTests;
+    </script>
+</body>
+</html>

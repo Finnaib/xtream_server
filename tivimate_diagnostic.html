@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TiviMate Diagnostic</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            color: #fff;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(0,0,0,0.3);
+            padding: 40px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+        h1 { text-align: center; font-size: 2.5rem; margin-bottom: 30px; }
+        .test-box {
+            background: rgba(255,255,255,0.1);
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+        }
+        .test-box h2 { color: #4fc3f7; margin-bottom: 20px; }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin: 10px;
+        }
+        button:hover { transform: scale(1.05); }
+        .result {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        .success { background: rgba(76, 175, 80, 0.3); border: 2px solid #4caf50; }
+        .error { background: rgba(244, 67, 54, 0.3); border: 2px solid #f44336; }
+        .warning { background: rgba(255, 152, 0, 0.3); border: 2px solid #ff9800; }
+        .info { background: rgba(33, 150, 243, 0.3); border: 2px solid #2196f3; }
+        pre {
+            background: rgba(0,0,0,0.5);
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 0.9rem;
+        }
+        .url-box {
+            background: rgba(0,0,0,0.5);
+            padding: 15px;
+            border-radius: 8px;
+            word-break: break-all;
+            font-family: monospace;
+            margin: 10px 0;
+        }
+        .channel-test {
+            background: rgba(255,255,255,0.05);
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #666;
+            border-radius: 5px;
+        }
+        .channel-test.testing { border-left-color: #ffc107; }
+        .channel-test.working { border-left-color: #4caf50; }
+        .channel-test.dead { border-left-color: #f44336; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 TiviMate Connection Diagnostic</h1>
+
+        <div class="info result">
+            <h2>⚠️ "Reconnecting" in TiviMate means:</h2>
+            <ul style="line-height: 2; margin-left: 30px;">
+                <li>❌ Stream URL is dead/unreachable</li>
+                <li>❌ Server is blocking the connection</li>
+                <li>❌ Stream format is incompatible</li>
+                <li>❌ Authentication is failing silently</li>
+            </ul>
+        </div>
+
+        <div class="test-box">
+            <h2>Test 1: Check API Authentication</h2>
+            <button onclick="testAuth()">🔐 Test Auth</button>
+            <div id="authResult"></div>
+        </div>
+
+        <div class="test-box">
+            <h2>Test 2: Get Channels</h2>
+            <button onclick="getChannels()">📺 Get Channel List</button>
+            <div id="channelsResult"></div>
+        </div>
+
+        <div class="test-box">
+            <h2>Test 3: Test Actual Stream URLs</h2>
+            <button onclick="testStreams()">🧪 Test First 5 Streams</button>
+            <div id="streamsResult"></div>
+        </div>
+
+        <div class="test-box">
+            <h2>Test 4: Check What TiviMate Sees</h2>
+            <button onclick="testTiviMateURL()">🔍 Simulate TiviMate Request</button>
+            <div id="tivimateResult"></div>
+        </div>
+
+        <div class="test-box">
+            <h2>Test 5: Verify Stream Format</h2>
+            <button onclick="checkStreamFormat()">📋 Check Stream Formats</button>
+            <div id="formatResult"></div>
+        </div>
+    </div>
+
+    <script>
+        const baseUrl = window.location.origin + '/xtream_server';
+        const username = 'finn';
+        const password = 'finn123';
+        let channels = [];
+
+        async function testAuth() {
+            const result = document.getElementById('authResult');
+            result.innerHTML = '<div class="info">⏳ Testing authentication...</div>';
+
+            try {
+                const url = `${baseUrl}/player_api.php?username=${username}&password=${password}`;
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.user_info && data.user_info.auth == 1) {
+                    result.innerHTML = `
+                        <div class="success">
+                            <h3>✅ Authentication SUCCESS</h3>
+                            <p>Username: ${data.user_info.username}</p>
+                            <p>Status: ${data.user_info.status}</p>
+                            <p>Max Connections: ${data.user_info.max_connections}</p>
+                            <p>Server: ${data.server_info.url}</p>
+                        </div>
+                    `;
+                } else {
+                    result.innerHTML = `
+                        <div class="error">
+                            <h3>❌ Authentication FAILED</h3>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                result.innerHTML = `
+                    <div class="error">
+                        <h3>❌ Error</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function getChannels() {
+            const result = document.getElementById('channelsResult');
+            result.innerHTML = '<div class="info">⏳ Getting channels...</div>';
+
+            try {
+                const url = `${baseUrl}/player_api.php?username=${username}&password=${password}&action=get_live_streams`;
+                const response = await fetch(url);
+                channels = await response.json();
+
+                if (Array.isArray(channels) && channels.length > 0) {
+                    result.innerHTML = `
+                        <div class="success">
+                            <h3>✅ Got ${channels.length} channels</h3>
+                            <p>First 5 channels:</p>
+                            ${channels.slice(0, 5).map(ch => `
+                                <div class="channel-test">
+                                    <strong>${ch.name}</strong><br>
+                                    <small>Stream ID: ${ch.stream_id}</small><br>
+                                    <small>Extension: ${ch.container_extension}</small><br>
+                                    <small style="word-break: break-all;">Direct: ${ch.direct_source.substring(0, 80)}...</small>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                } else {
+                    result.innerHTML = `
+                        <div class="error">
+                            <h3>❌ No channels found</h3>
+                            <pre>${JSON.stringify(channels, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                result.innerHTML = `
+                    <div class="error">
+                        <h3>❌ Error</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function testStreams() {
+            const result = document.getElementById('streamsResult');
+            
+            if (channels.length === 0) {
+                await getChannels();
+                if (channels.length === 0) {
+                    result.innerHTML = '<div class="error">❌ No channels to test. Run "Get Channel List" first.</div>';
+                    return;
+                }
+            }
+
+            result.innerHTML = '<div class="info">⏳ Testing first 5 streams...</div>';
+
+            let html = '<h3>Stream Tests:</h3>';
+            const testChannels = channels.slice(0, 5);
+
+            for (const channel of testChannels) {
+                const streamUrl = channel.direct_source;
+                html += `<div class="channel-test testing" id="test-${channel.stream_id}">
+                    <strong>${channel.name}</strong><br>
+                    <small>${streamUrl}</small><br>
+                    <span>⏳ Testing...</span>
+                </div>`;
+            }
+
+            result.innerHTML = html;
+
+            for (const channel of testChannels) {
+                const testDiv = document.getElementById(`test-${channel.stream_id}`);
+                const streamUrl = channel.direct_source;
+
+                try {
+                    const response = await fetch(streamUrl, { 
+                        method: 'HEAD',
+                        mode: 'no-cors'
+                    });
+
+                    // Try to load in video element
+                    const canPlay = await testVideoPlayback(streamUrl);
+                    
+                    if (canPlay) {
+                        testDiv.className = 'channel-test working';
+                        testDiv.innerHTML = `
+                            <strong>${channel.name}</strong><br>
+                            <small>${streamUrl.substring(0, 80)}...</small><br>
+                            <span style="color: #4caf50;">✅ WORKING - Stream is reachable and playable</span>
+                        `;
+                    } else {
+                        testDiv.className = 'channel-test dead';
+                        testDiv.innerHTML = `
+                            <strong>${channel.name}</strong><br>
+                            <small>${streamUrl.substring(0, 80)}...</small><br>
+                            <span style="color: #f44336;">❌ DEAD - Stream URL doesn't work</span>
+                        `;
+                    }
+                } catch (error) {
+                    testDiv.className = 'channel-test dead';
+                    testDiv.innerHTML = `
+                        <strong>${channel.name}</strong><br>
+                        <small>${streamUrl.substring(0, 80)}...</small><br>
+                        <span style="color: #f44336;">❌ ERROR - ${error.message}</span>
+                    `;
+                }
+            }
+        }
+
+        function testVideoPlayback(url) {
+            return new Promise((resolve) => {
+                const video = document.createElement('video');
+                const timeout = setTimeout(() => {
+                    video.src = '';
+                    resolve(false);
+                }, 3000);
+
+                video.oncanplay = () => {
+                    clearTimeout(timeout);
+                    video.src = '';
+                    resolve(true);
+                };
+
+                video.onerror = () => {
+                    clearTimeout(timeout);
+                    resolve(false);
+                };
+
+                video.src = url;
+                video.load();
+            });
+        }
+
+        async function testTiviMateURL() {
+            const result = document.getElementById('tivimateResult');
+            result.innerHTML = '<div class="info">⏳ Checking what TiviMate would request...</div>';
+
+            if (channels.length === 0) {
+                await getChannels();
+            }
+
+            if (channels.length === 0) {
+                result.innerHTML = '<div class="error">❌ No channels available</div>';
+                return;
+            }
+
+            const firstChannel = channels[0];
+            const tivimateUrl = `${baseUrl}/live/${username}/${password}/${firstChannel.stream_id}.${firstChannel.container_extension}`;
+
+            let html = `
+                <div class="info">
+                    <h3>TiviMate would request this URL:</h3>
+                    <div class="url-box">${tivimateUrl}</div>
+                    <p>Testing this URL...</p>
+                </div>
+            `;
+            result.innerHTML = html;
+
+            try {
+                const response = await fetch(tivimateUrl);
+                const status = response.status;
+                const contentType = response.headers.get('content-type');
+
+                if (status === 200) {
+                    html += `
+                        <div class="success">
+                            <h3>✅ URL Responds: HTTP ${status}</h3>
+                            <p>Content-Type: ${contentType}</p>
+                            <p><strong>TiviMate can reach your server!</strong></p>
+                        </div>
+                    `;
+                } else if (status === 302 || status === 301) {
+                    const location = response.headers.get('location');
+                    html += `
+                        <div class="warning">
+                            <h3>⚠️ Redirect: HTTP ${status}</h3>
+                            <p>Redirecting to: ${location}</p>
+                            <p>TiviMate should follow this redirect.</p>
+                        </div>
+                    `;
+                } else {
+                    html += `
+                        <div class="error">
+                            <h3>❌ Error: HTTP ${status}</h3>
+                            <p>This is why TiviMate keeps reconnecting!</p>
+                        </div>
+                    `;
+                }
+
+                result.innerHTML = html;
+            } catch (error) {
+                result.innerHTML = html + `
+                    <div class="error">
+                        <h3>❌ Request Failed</h3>
+                        <p>${error.message}</p>
+                        <p><strong>This is why TiviMate can't connect!</strong></p>
+                    </div>
+                `;
+            }
+        }
+
+        async function checkStreamFormat() {
+            const result = document.getElementById('formatResult');
+            
+            if (channels.length === 0) {
+                await getChannels();
+            }
+
+            if (channels.length === 0) {
+                result.innerHTML = '<div class="error">❌ No channels</div>';
+                return;
+            }
+
+            const formats = {
+                m3u8: 0,
+                ts: 0,
+                other: 0,
+                dead: 0
+            };
+
+            channels.forEach(ch => {
+                const url = ch.direct_source.toLowerCase();
+                if (url.includes('.m3u8')) {
+                    formats.m3u8++;
+                } else if (url.includes('.ts')) {
+                    formats.ts++;
+                } else {
+                    formats.other++;
+                }
+            });
+
+            result.innerHTML = `
+                <div class="info">
+                    <h3>📊 Stream Format Distribution:</h3>
+                    <p>M3U8 (HLS): <strong>${formats.m3u8}</strong></p>
+                    <p>TS (MPEG-TS): <strong>${formats.ts}</strong></p>
+                    <p>Other: <strong>${formats.other}</strong></p>
+                    <p style="margin-top: 20px;"><strong>Recommendation:</strong></p>
+                    ${formats.m3u8 > 0 ? '<p>✅ M3U8 streams should work in TiviMate</p>' : '<p>⚠️ No M3U8 streams found</p>'}
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
