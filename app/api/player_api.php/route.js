@@ -1,5 +1,5 @@
 // File Location: app/api/player_api.php/route.js
-// This is the main Xtream API endpoint
+// This is the main Xtream API endpoint (Updated with VOD info)
 
 import { NextResponse } from 'next/server';
 import { authenticateUser } from '@/lib/auth';
@@ -10,7 +10,8 @@ import {
   getLiveCategories,
   getVODCategories,
   getSeriesCategories,
-  getSeriesInfo
+  getSeriesInfo,
+  getVODInfo
 } from '@/lib/db';
 
 export async function GET(request) {
@@ -77,13 +78,13 @@ export async function GET(request) {
         if (!vodId) {
           return NextResponse.json({ error: 'vod_id required' }, { status: 400 });
         }
-        // Implement VOD info retrieval
-        return NextResponse.json({ info: {}, movie_data: {} });
+        const vodInfo = await getVODInfo(vodId);
+        return NextResponse.json(vodInfo);
 
       case 'get_short_epg':
         const streamId = searchParams.get('stream_id');
         const limit = searchParams.get('limit') || 10;
-        // Implement EPG retrieval
+        // Implement EPG retrieval if you have EPG data
         return NextResponse.json({ epg_listings: [] });
 
       default:
@@ -100,7 +101,7 @@ export async function GET(request) {
             active_cons: "0",
             created_at: user.created_at ? Math.floor(new Date(user.created_at).getTime() / 1000) : null,
             max_connections: user.max_connections || "1",
-            allowed_output_formats: ["m3u8", "ts", "rtmp"]
+            allowed_output_formats: ["m3u8", "ts", "rtmp", "mp4"]
           },
           server_info: {
             url: process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3000",
