@@ -1,18 +1,69 @@
 // File Location: app/api/player_api.php/route.js
-// This is the main Xtream API endpoint (Updated with VOD info)
+// Xtream API that works with ALL IPTV apps
 
 import { NextResponse } from 'next/server';
-import { authenticateUser } from '@/lib/auth';
-import { 
-  getLiveStreams, 
-  getVODStreams, 
-  getSeries, 
-  getLiveCategories,
-  getVODCategories,
-  getSeriesCategories,
-  getSeriesInfo,
-  getVODInfo
-} from '@/lib/db';
+import { authenticateUser } from '../../../lib/auth.js';
+import { getConnection } from '../../../lib/db.js';
+
+async function getStreamsForXtream(type, categoryId = null, username, password, serverUrl) {
+  const conn = await getConnection();
+  
+  let query = 'SELECT * FROM streams WHERE type = ? AND active = ?';
+  let params = [type, 1];
+  
+  if (categoryId) {
+    query += ' AND category_id = ?';
+    params.push(categoryId);
+  }
+  
+  const [rows] = await conn.execute(query, params);
+  
+  return rows.map(stream => {
+    // Determine the extension based on stream URL
+    const streamSource = stream.stream_source || stream.direct_source || '';
+    let extension = 'm3u8'; // default
+    
+    if (streamSource.includes('.ts')) extension = 'ts';
+    else if (streamSource.includes('.mp4')) extension = 'mp4';
+    else if (streamSource.includes('.mkv')) extension = 'mkv';
+    
+    // Return stream with BOTH direct source AND server URL
+    return {
+      num: stream.id,
+      name: stream.name,
+      stream_type: type,
+      stream_id: stream.id,
+      stream_icon: stream.icon || "",
+      epg_channel_id: stream.epg_channel_id || "",
+      added: stream.created_at ? Math.floor(new Date(stream.created_at).getTime() / 1000) : "",
+      category_id: stream.category_id?.toString() || "",
+      custom_sid: stream.custom_sid || "",
+      tv_archive: stream.tv_archive || 0,
+      direct_source: streamSource, // Direct URL (for some players)
+      tv_archive_duration: stream.tv_archive_duration || 0,
+      rating: stream.rating?.toString() || "0",
+      rating_5based: parseFloat((stream.rating || 0) / 2).toFixed(1),
+      container_extension: extension,
+      tmdb_id: stream.tmdb_id || "",
+      // This is what most IPTV apps will use:
+      stream_url: `${serverUrl}/${username}/${password}/${stream.id}.${extension}`
+    };
+  });
+}
+
+async function getCategories(type) {
+  const conn = await getConnection();
+  const [rows] = await conn.execute(
+    'SELECT * FROM categories WHERE type = ?',
+    [type]
+  );
+  
+  return rows.map(cat => ({
+    category_id: cat.id.toString(),
+    category_name: cat.name,
+    parent_id: cat.parent_id || 0
+  }));
+}
 
 export async function GET(request) {
   try {
@@ -22,7 +73,9 @@ export async function GET(request) {
     const password = searchParams.get('password');
     const action = searchParams.get('action');
 
-    // Authenticate user first
+    const serverUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000';
+
+    // Authenticate
     if (!username || !password) {
       return NextResponse.json({ 
         user_info: { auth: 0, message: 'Invalid credentials' } 
@@ -36,59 +89,76 @@ export async function GET(request) {
       }, { status: 401 });
     }
 
-    // Handle different actions
+    // Handle actions
     switch (action) {
       case 'get_live_streams':
         const categoryId = searchParams.get('category_id');
-        const liveStreams = await getLiveStreams(user.id, categoryId);
+        const liveStreams = await getStreamsForXtream('live', categoryId, username, password, serverUrl);
         return NextResponse.json(liveStreams);
 
       case 'get_vod_streams':
         const vodCategoryId = searchParams.get('category_id');
-        const vodStreams = await getVODStreams(user.id, vodCategoryId);
+        const vodStreams = await getStreamsForXtream('movie', vodCategoryId, username, password, serverUrl);
         return NextResponse.json(vodStreams);
 
       case 'get_series':
-        const seriesCategoryId = searchParams.get('category_id');
-        const series = await getSeries(user.id, seriesCategoryId);
-        return NextResponse.json(series);
+        return NextResponse.json([]);
 
       case 'get_live_categories':
-        const liveCategories = await getLiveCategories();
+        const liveCategories = await getCategories('live');
         return NextResponse.json(liveCategories);
 
       case 'get_vod_categories':
-        const vodCategories = await getVODCategories();
+        const vodCategories = await getCategories('movie');
         return NextResponse.json(vodCategories);
 
       case 'get_series_categories':
-        const seriesCategories = await getSeriesCategories();
+        const seriesCategories = await getCategories('series');
         return NextResponse.json(seriesCategories);
 
       case 'get_series_info':
-        const seriesId = searchParams.get('series_id');
-        if (!seriesId) {
-          return NextResponse.json({ error: 'series_id required' }, { status: 400 });
-        }
-        const seriesInfo = await getSeriesInfo(seriesId);
-        return NextResponse.json(seriesInfo);
+        return NextResponse.json({ seasons: [], info: {}, episodes: {} });
 
       case 'get_vod_info':
         const vodId = searchParams.get('vod_id');
         if (!vodId) {
           return NextResponse.json({ error: 'vod_id required' }, { status: 400 });
         }
-        const vodInfo = await getVODInfo(vodId);
-        return NextResponse.json(vodInfo);
+        
+        const conn = await getConnection();
+        const [movies] = await conn.execute(
+          'SELECT * FROM streams WHERE id = ? AND type = ?',
+          [vodId, 'movie']
+        );
+        
+        if (movies.length === 0) {
+          return NextResponse.json({ info: {}, movie_data: {} });
+        }
+        
+        const movie = movies[0];
+        const streamSource = movie.stream_source || movie.direct_source || '';
+        
+        return NextResponse.json({
+          info: {
+            tmdb_id: movie.tmdb_id || "",
+            name: movie.name,
+            cover_big: movie.icon || "",
+            rating: movie.rating || 0
+          },
+          movie_data: {
+            stream_id: movie.id,
+            name: movie.name,
+            added: movie.created_at ? Math.floor(new Date(movie.created_at).getTime() / 1000) : "",
+            container_extension: movie.container_extension || "mp4",
+            direct_source: streamSource
+          }
+        });
 
       case 'get_short_epg':
-        const streamId = searchParams.get('stream_id');
-        const limit = searchParams.get('limit') || 10;
-        // Implement EPG retrieval if you have EPG data
         return NextResponse.json({ epg_listings: [] });
 
       default:
-        // Default: return user info and server info
+        // User info
         return NextResponse.json({
           user_info: {
             username: user.username,
@@ -100,15 +170,16 @@ export async function GET(request) {
             is_trial: user.is_trial ? "1" : "0",
             active_cons: "0",
             created_at: user.created_at ? Math.floor(new Date(user.created_at).getTime() / 1000) : null,
-            max_connections: user.max_connections || "1",
+            max_connections: user.max_connections?.toString() || "1",
             allowed_output_formats: ["m3u8", "ts", "rtmp", "mp4"]
           },
           server_info: {
-            url: process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3000",
-            port: "443",
+            url: serverUrl,
+            port: "80",
             https_port: "443",
-            server_protocol: "https",
+            server_protocol: serverUrl.includes('https') ? 'https' : 'http',
             rtmp_port: "1935",
+            timezone: "UTC",
             timestamp_now: Math.floor(Date.now() / 1000),
             time_now: new Date().toISOString()
           }

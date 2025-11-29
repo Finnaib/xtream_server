@@ -1,5 +1,5 @@
 // File Location: scripts/import-m3u.js
-// Import M3U files into MySQL database (matches your schema)
+// Import M3U files into MySQL database (Windows compatible)
 
 const mysql = require('mysql2/promise');
 const fs = require('fs');
@@ -147,7 +147,7 @@ async function importM3UFile(conn, filePath) {
 
 // Main import function
 async function importAllM3U() {
-  const conn = await getConnection();
+  let conn;
   
   try {
     console.log('🚀 Starting M3U import...\n');
@@ -174,6 +174,10 @@ async function importAllM3U() {
     }
     
     console.log(`📚 Found ${files.length} M3U file(s)\n`);
+    
+    // Connect to database
+    conn = await getConnection();
+    console.log('✅ Database connected!\n');
     
     // Import each file
     for (const file of files) {
@@ -203,9 +207,16 @@ async function importAllM3U() {
     console.log('\n✨ Import completed successfully!');
     
   } catch (error) {
-    console.error('❌ Import error:', error);
+    console.error('\n❌ Import error:', error.message);
+    console.error('\nTroubleshooting:');
+    console.error('- Make sure MySQL is running (XAMPP or service)');
+    console.error('- Check .env.local has correct database credentials');
+    console.error('- Verify database exists: CREATE DATABASE xtream_db;');
+    console.error('- Import schema: mysql -u root -p xtream_db < database-schema.sql');
   } finally {
-    await conn.end();
+    if (conn) {
+      await conn.end();
+    }
   }
 }
 
