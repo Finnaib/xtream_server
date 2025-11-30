@@ -5,10 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p $PORT",
     "lint": "next lint",
-    "import:m3u": "node scripts/import-m3u.js",
-    "check": "node check-setup.js"
+    "import:m3u": "node scripts/import-m3u.js"
   },
   "dependencies": {
     "dotenv": "^16.6.1",
