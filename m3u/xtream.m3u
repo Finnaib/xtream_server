@@ -1068,6 +1068,42 @@ http://mhav1.com:80/live/ht2990/742579548/2181.ts
 http://mhav1.com:80/live/ht2990/742579548/24235.ts
 #EXTINF:-1 tvg-id="155830" tvg-name="MH TV Search" tvg-logo="http://search.webhypertv.xyz/search/images/506682076.png" group-title="MH TV Search",MH TV Search
 http://mhav1.com:80/live/ht2990/742579548/155830.ts
+#EXTINF:-1 tvg-id="254209" tvg-name="Alkass 1 HD" group-title="كاس العرب",Alkass 1 HD
+http://mhav1.com:80/live/ht2990/742579548/254209.ts
+#EXTINF:-1 tvg-id="254210" tvg-name="Alkass 2 HD" group-title="كاس العرب",Alkass 2 HD
+http://mhav1.com:80/live/ht2990/742579548/254210.ts
+#EXTINF:-1 tvg-id="254211" tvg-name="Alkass 3 HD" group-title="كاس العرب",Alkass 3 HD
+http://mhav1.com:80/live/ht2990/742579548/254211.ts
+#EXTINF:-1 tvg-id="254212" tvg-name="Alkass 4 HD" group-title="كاس العرب",Alkass 4 HD
+http://mhav1.com:80/live/ht2990/742579548/254212.ts
+#EXTINF:-1 tvg-id="254213" tvg-name="Alkass 1 SD" group-title="كاس العرب",Alkass 1 SD
+http://mhav1.com:80/live/ht2990/742579548/254213.ts
+#EXTINF:-1 tvg-id="254214" tvg-name="Alkass 2 SD" group-title="كاس العرب",Alkass 2 SD
+http://mhav1.com:80/live/ht2990/742579548/254214.ts
+#EXTINF:-1 tvg-id="254215" tvg-name="Alkass 3 SD" group-title="كاس العرب",Alkass 3 SD
+http://mhav1.com:80/live/ht2990/742579548/254215.ts
+#EXTINF:-1 tvg-id="254216" tvg-name="Alkass 4 SD" group-title="كاس العرب",Alkass 4 SD
+http://mhav1.com:80/live/ht2990/742579548/254216.ts
+#EXTINF:-1 tvg-id="254220" tvg-name="beIN SPORTS HD" group-title="كاس العرب",beIN SPORTS HD
+http://mhav1.com:80/live/ht2990/742579548/254220.ts
+#EXTINF:-1 tvg-id="254217" tvg-name="beIN SPORTS XTRA 1 HD" group-title="كاس العرب",beIN SPORTS XTRA 1 HD
+http://mhav1.com:80/live/ht2990/742579548/254217.ts
+#EXTINF:-1 tvg-id="254218" tvg-name="beIN SPORTS XTRA 2 HD" group-title="كاس العرب",beIN SPORTS XTRA 2 HD
+http://mhav1.com:80/live/ht2990/742579548/254218.ts
+#EXTINF:-1 tvg-id="254219" tvg-name="beIN SPORTS XTRA 3 HD" group-title="كاس العرب",beIN SPORTS XTRA 3 HD
+http://mhav1.com:80/live/ht2990/742579548/254219.ts
+#EXTINF:-1 tvg-id="254225" tvg-name="SHASHA SPORT 1HD" group-title="كاس العرب",SHASHA SPORT 1HD
+http://mhav1.com:80/live/ht2990/742579548/254225.ts
+#EXTINF:-1 tvg-id="254226" tvg-name="SHASHA SPORT 2HD" group-title="كاس العرب",SHASHA SPORT 2HD
+http://mhav1.com:80/live/ht2990/742579548/254226.ts
+#EXTINF:-1 tvg-id="254221" tvg-name="AD SPORT 1" group-title="كاس العرب",AD SPORT 1
+http://mhav1.com:80/live/ht2990/742579548/254221.ts
+#EXTINF:-1 tvg-id="254222" tvg-name="AD SPORT 2" group-title="كاس العرب",AD SPORT 2
+http://mhav1.com:80/live/ht2990/742579548/254222.ts
+#EXTINF:-1 tvg-id="254223" tvg-name="Dubai Sports 1 HD" group-title="كاس العرب",Dubai Sports 1 HD
+http://mhav1.com:80/live/ht2990/742579548/254223.ts
+#EXTINF:-1 tvg-id="254224" tvg-name="Dubai Sports 2 HD" group-title="كاس العرب",Dubai Sports 2 HD
+http://mhav1.com:80/live/ht2990/742579548/254224.ts
 #EXTINF:-1 tvg-id="79412" tvg-name="Shahid_MBC-Plus-Drama" group-title="Shahid Live شاهد لايف",Shahid_MBC-Plus-Drama
 http://mhav1.com:80/live/ht2990/742579548/79412.ts
 #EXTINF:-1 tvg-id="79413" tvg-name="Shahid_Bollywood" group-title="Shahid Live شاهد لايف",Shahid_Bollywood
