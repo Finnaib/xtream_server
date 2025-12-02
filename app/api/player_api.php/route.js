@@ -1,11 +1,11 @@
 // File Location: app/api/player_api.php/route.js
-// Xtream API that works with ALL IPTV apps
+// Returns DIRECT stream URLs for maximum compatibility
 
 import { NextResponse } from 'next/server';
 import { authenticateUser } from '../../../lib/auth.js';
 import { getConnection } from '../../../lib/db.js';
 
-async function getStreamsForXtream(type, categoryId = null, username, password, serverUrl) {
+async function getStreamsWithDirectURLs(type, categoryId = null) {
   const conn = await getConnection();
   
   let query = 'SELECT * FROM streams WHERE type = ? AND active = ?';
@@ -19,15 +19,9 @@ async function getStreamsForXtream(type, categoryId = null, username, password, 
   const [rows] = await conn.execute(query, params);
   
   return rows.map(stream => {
-    // Determine the extension based on stream URL
-    const streamSource = stream.stream_source || stream.direct_source || '';
-    let extension = 'm3u8'; // default
+    // Use the ACTUAL stream URL from M3U file
+    const directUrl = stream.stream_source || stream.direct_source || '';
     
-    if (streamSource.includes('.ts')) extension = 'ts';
-    else if (streamSource.includes('.mp4')) extension = 'mp4';
-    else if (streamSource.includes('.mkv')) extension = 'mkv';
-    
-    // Return stream with BOTH direct source AND server URL
     return {
       num: stream.id,
       name: stream.name,
@@ -39,14 +33,12 @@ async function getStreamsForXtream(type, categoryId = null, username, password, 
       category_id: stream.category_id?.toString() || "",
       custom_sid: stream.custom_sid || "",
       tv_archive: stream.tv_archive || 0,
-      direct_source: streamSource, // Direct URL (for some players)
+      direct_source: directUrl, // ACTUAL stream URL
       tv_archive_duration: stream.tv_archive_duration || 0,
       rating: stream.rating?.toString() || "0",
       rating_5based: parseFloat((stream.rating || 0) / 2).toFixed(1),
-      container_extension: extension,
-      tmdb_id: stream.tmdb_id || "",
-      // This is what most IPTV apps will use:
-      stream_url: `${serverUrl}/${username}/${password}/${stream.id}.${extension}`
+      container_extension: stream.container_extension || "m3u8",
+      tmdb_id: stream.tmdb_id || ""
     };
   });
 }
@@ -93,12 +85,12 @@ export async function GET(request) {
     switch (action) {
       case 'get_live_streams':
         const categoryId = searchParams.get('category_id');
-        const liveStreams = await getStreamsForXtream('live', categoryId, username, password, serverUrl);
+        const liveStreams = await getStreamsWithDirectURLs('live', categoryId);
         return NextResponse.json(liveStreams);
 
       case 'get_vod_streams':
         const vodCategoryId = searchParams.get('category_id');
-        const vodStreams = await getStreamsForXtream('movie', vodCategoryId, username, password, serverUrl);
+        const vodStreams = await getStreamsWithDirectURLs('movie', vodCategoryId);
         return NextResponse.json(vodStreams);
 
       case 'get_series':
