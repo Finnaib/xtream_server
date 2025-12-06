@@ -1,11 +1,11 @@
 // File Location: app/api/player_api.php/route.js
-// Xtream API optimized for old MPEG4 boxes
+// Xtream API optimized for old MPEG4 boxes - returns direct URLs only
 
 import { NextResponse } from 'next/server';
 import { authenticateUser } from '../../../lib/auth.js';
 import { getConnection } from '../../../lib/db.js';
 
-async function getStreamsForXtream(type, categoryId, username, password, serverUrl) {
+async function getStreamsForXtream(type, categoryId) {
   const conn = await getConnection();
   
   let query = 'SELECT * FROM streams WHERE type = ? AND active = ?';
@@ -19,12 +19,7 @@ async function getStreamsForXtream(type, categoryId, username, password, serverU
   const [rows] = await conn.execute(query, params);
   
   return rows.map(stream => {
-    const streamSource = stream.stream_source || stream.direct_source || '';
-    
-    // Determine extension
-    let ext = 'ts';
-    if (streamSource.includes('.m3u8')) ext = 'm3u8';
-    else if (streamSource.includes('.mp4')) ext = 'mp4';
+    const streamUrl = stream.stream_source || stream.direct_source || '';
     
     return {
       num: stream.id,
@@ -37,11 +32,9 @@ async function getStreamsForXtream(type, categoryId, username, password, serverU
       category_id: stream.category_id?.toString() || "",
       custom_sid: "",
       tv_archive: 0,
-      direct_source: streamSource, // Direct URL
-      tv_archive_duration: 0,
-      rating: stream.rating?.toString() || "0",
-      rating_5based: parseFloat((stream.rating || 0) / 2).toFixed(1),
-      container_extension: ext
+      // Return ONLY the direct URL - no server redirect
+      direct_source: streamUrl,
+      tv_archive_duration: 0
     };
   });
 }
@@ -88,12 +81,12 @@ export async function GET(request) {
     switch (action) {
       case 'get_live_streams':
         const categoryId = searchParams.get('category_id');
-        const liveStreams = await getStreamsForXtream('live', categoryId, username, password, serverUrl);
+        const liveStreams = await getStreamsForXtream('live', categoryId);
         return NextResponse.json(liveStreams);
 
       case 'get_vod_streams':
         const vodCategoryId = searchParams.get('category_id');
-        const vodStreams = await getStreamsForXtream('movie', vodCategoryId, username, password, serverUrl);
+        const vodStreams = await getStreamsForXtream('movie', vodCategoryId);
         return NextResponse.json(vodStreams);
 
       case 'get_series':
@@ -135,13 +128,11 @@ export async function GET(request) {
         return NextResponse.json({
           info: {
             name: movie.name,
-            cover_big: movie.icon || "",
-            rating: movie.rating || 0
+            cover_big: movie.icon || ""
           },
           movie_data: {
             stream_id: movie.id,
             name: movie.name,
-            container_extension: movie.container_extension || "mp4",
             direct_source: movie.stream_source || movie.direct_source || ""
           }
         });
@@ -158,11 +149,11 @@ export async function GET(request) {
             message: "",
             auth: 1,
             status: "Active",
-            exp_date: user.exp_date ? Math.floor(new Date(user.exp_date).getTime() / 1000) : "1924905600",
+            exp_date: "1924905600",
             is_trial: "0",
             active_cons: "0",
-            created_at: user.created_at ? Math.floor(new Date(user.created_at).getTime() / 1000) : Math.floor(Date.now() / 1000),
-            max_connections: user.max_connections?.toString() || "5",
+            created_at: Math.floor(Date.now() / 1000),
+            max_connections: "5",
             allowed_output_formats: ["ts", "m3u8"]
           },
           server_info: {
