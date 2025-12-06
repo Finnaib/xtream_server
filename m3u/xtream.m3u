@@ -474,10 +474,6 @@ http://mhav1.com:80/live/ht2990/742579548/3352.ts
 http://mhav1.com:80/live/ht2990/742579548/3351.ts
 #EXTINF:-1 tvg-id="12199" tvg-name="beIN_BBC Earth HD" group-title="beIN Movies - بي ان الترفهيه",beIN_BBC Earth HD
 http://mhav1.com:80/live/ht2990/742579548/12199.ts
-#EXTINF:-1 tvg-id="12201" tvg-name="beIN_Travel_HD" group-title="beIN Movies - بي ان الترفهيه",beIN_Travel_HD
-http://mhav1.com:80/live/ht2990/742579548/12201.ts
-#EXTINF:-1 tvg-id="12198" tvg-name="beIN HGTV HD" group-title="beIN Movies - بي ان الترفهيه",beIN HGTV HD
-http://mhav1.com:80/live/ht2990/742579548/12198.ts
 #EXTINF:-1 tvg-id="3655" tvg-name="Food Network" group-title="beIN Movies - بي ان الترفهيه",Food Network
 http://mhav1.com:80/live/ht2990/742579548/3655.ts
 #EXTINF:-1 tvg-id="12202" tvg-name="beIN_Cartoonito" group-title="beIN Movies - بي ان الترفهيه",beIN_Cartoonito
@@ -1086,6 +1082,8 @@ http://mhav1.com:80/live/ht2990/742579548/254215.ts
 http://mhav1.com:80/live/ht2990/742579548/254216.ts
 #EXTINF:-1 tvg-id="254220" tvg-name="beIN SPORTS HD" group-title="كاس العرب",beIN SPORTS HD
 http://mhav1.com:80/live/ht2990/742579548/254220.ts
+#EXTINF:-1 tvg-id="254585" tvg-name="beIN SPORTS SD" group-title="كاس العرب",beIN SPORTS SD
+http://mhav1.com:80/live/ht2990/742579548/254585.ts
 #EXTINF:-1 tvg-id="254217" tvg-name="beIN SPORTS XTRA 1 HD" group-title="كاس العرب",beIN SPORTS XTRA 1 HD
 http://mhav1.com:80/live/ht2990/742579548/254217.ts
 #EXTINF:-1 tvg-id="254218" tvg-name="beIN SPORTS XTRA 2 HD" group-title="كاس العرب",beIN SPORTS XTRA 2 HD
