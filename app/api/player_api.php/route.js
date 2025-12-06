@@ -1,11 +1,31 @@
 // File Location: app/api/player_api.php/route.js
-// Xtream API optimized for old MPEG4 boxes - returns direct URLs only
+// Xtream API that resolves redirects for IPTV apps and old boxes
 
 import { NextResponse } from 'next/server';
 import { authenticateUser } from '../../../lib/auth.js';
 import { getConnection } from '../../../lib/db.js';
 
-async function getStreamsForXtream(type, categoryId) {
+// Resolve redirect URLs to final stream URLs
+async function resolveRedirect(url) {
+  try {
+    const response = await fetch(url, {
+      method: 'HEAD',
+      redirect: 'follow',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': '*/*'
+      }
+    });
+    
+    // Return final URL after all redirects
+    return response.url;
+  } catch (error) {
+    console.error('Redirect resolve error:', error);
+    return url; // Return original if resolution fails
+  }
+}
+
+async function getStreamsForXtream(type, categoryId, resolveUrls = false) {
   const conn = await getConnection();
   
   let query = 'SELECT * FROM streams WHERE type = ? AND active = ?';
@@ -18,8 +38,14 @@ async function getStreamsForXtream(type, categoryId) {
   
   const [rows] = await conn.execute(query, params);
   
-  return rows.map(stream => {
-    const streamUrl = stream.stream_source || stream.direct_source || '';
+  // Process streams
+  const streams = await Promise.all(rows.map(async (stream) => {
+    let streamUrl = stream.stream_source || stream.direct_source || '';
+    
+    // Resolve redirects if requested
+    if (resolveUrls && streamUrl) {
+      streamUrl = await resolveRedirect(streamUrl);
+    }
     
     return {
       num: stream.id,
@@ -32,11 +58,12 @@ async function getStreamsForXtream(type, categoryId) {
       category_id: stream.category_id?.toString() || "",
       custom_sid: "",
       tv_archive: 0,
-      // Return ONLY the direct URL - no server redirect
       direct_source: streamUrl,
       tv_archive_duration: 0
     };
-  });
+  }));
+  
+  return streams;
 }
 
 async function getCategories(type) {
@@ -60,6 +87,7 @@ export async function GET(request) {
     const username = searchParams.get('username');
     const password = searchParams.get('password');
     const action = searchParams.get('action');
+    const resolve = searchParams.get('resolve') === 'yes'; // Optional: resolve redirects
 
     const serverUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000';
 
@@ -81,12 +109,12 @@ export async function GET(request) {
     switch (action) {
       case 'get_live_streams':
         const categoryId = searchParams.get('category_id');
-        const liveStreams = await getStreamsForXtream('live', categoryId);
+        const liveStreams = await getStreamsForXtream('live', categoryId, resolve);
         return NextResponse.json(liveStreams);
 
       case 'get_vod_streams':
         const vodCategoryId = searchParams.get('category_id');
-        const vodStreams = await getStreamsForXtream('movie', vodCategoryId);
+        const vodStreams = await getStreamsForXtream('movie', vodCategoryId, resolve);
         return NextResponse.json(vodStreams);
 
       case 'get_series':
@@ -124,6 +152,11 @@ export async function GET(request) {
         }
         
         const movie = movies[0];
+        let movieUrl = movie.stream_source || movie.direct_source || '';
+        
+        if (resolve && movieUrl) {
+          movieUrl = await resolveRedirect(movieUrl);
+        }
         
         return NextResponse.json({
           info: {
@@ -133,7 +166,7 @@ export async function GET(request) {
           movie_data: {
             stream_id: movie.id,
             name: movie.name,
-            direct_source: movie.stream_source || movie.direct_source || ""
+            direct_source: movieUrl
           }
         });
 
@@ -141,7 +174,7 @@ export async function GET(request) {
         return NextResponse.json({ epg_listings: [] });
 
       default:
-        // User info - simplified for old boxes
+        // User info
         return NextResponse.json({
           user_info: {
             username: user.username,
