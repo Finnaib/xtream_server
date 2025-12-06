@@ -4,23 +4,27 @@
 const nextConfig = {
   async rewrites() {
     return [
-      // Player API
+      // Rewrite /player_api_resolved.php for apps that need resolved URLs
+      {
+        source: '/player_api_resolved.php',
+        destination: '/api/player_api_resolved.php'
+      },
+      // Rewrite /player_api.php to /api/player_api.php for compatibility
       {
         source: '/player_api.php',
         destination: '/api/player_api.php'
       },
-      // M3U Playlist
+      // Rewrite /get.php for M3U playlist
       {
         source: '/get.php',
         destination: '/api/get.php'
       },
-      // EPG
+      // Rewrite /xmltv.php for EPG
       {
         source: '/xmltv.php',
         destination: '/api/xmltv.php'
       },
-      
-      // STREAM ROUTES - Multiple patterns for IPTV app compatibility
+      // Stream URLs rewrite - Multiple patterns for IPTV app compatibility
       
       // Pattern 1: /live/username/password/streamId.ext
       {
