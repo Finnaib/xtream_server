@@ -109,15 +109,15 @@ export async function GET(request) {
 
     // Handle actions
     switch (action) {
-      case 'get_live_streams':
-        const categoryId = searchParams.get('category_id');
-        const liveStreams = await getStreamsForXtream('live', categoryId, resolve);
-        return NextResponse.json(liveStreams);
+     case 'get_live_streams':
+  const categoryId = searchParams.get('category_id');
+  const liveStreams = await getStreamsForXtream('live', categoryId, true); // Always resolve
+  return NextResponse.json(liveStreams);
 
-      case 'get_vod_streams':
-        const vodCategoryId = searchParams.get('category_id');
-        const vodStreams = await getStreamsForXtream('movie', vodCategoryId, resolve);
-        return NextResponse.json(vodStreams);
+    case 'get_vod_streams':
+  const vodCategoryId = searchParams.get('category_id');
+  const vodStreams = await getStreamsForXtream('movie', vodCategoryId, true); // Always resolve
+  return NextResponse.json(vodStreams);
 
       case 'get_series':
         return NextResponse.json([]);
