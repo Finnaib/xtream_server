@@ -1,10 +1,9 @@
 // File Location: app/api/stream/[username]/[password]/[streamId]/[extension]/route.js
-// Simplified stream endpoint with proper error handling
+// Stream redirect optimized for old MPEG4 boxes
 
 import { NextResponse } from 'next/server';
 import mysql from 'mysql2/promise';
 
-// Create a fresh connection for each request
 async function getConnection() {
   return await mysql.createConnection({
     host: process.env.DB_HOST,
@@ -12,7 +11,7 @@ async function getConnection() {
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
     port: process.env.DB_PORT || 3306,
-    connectTimeout: 5000, // 5 second timeout
+    connectTimeout: 5000,
   });
 }
 
@@ -20,11 +19,9 @@ export async function GET(request, { params }) {
   let conn;
   
   try {
-    console.log('🎬 Stream request:', params);
-    
     const { username, password, streamId, extension } = params;
 
-    // Quick auth check
+    // Quick auth
     conn = await getConnection();
     const [users] = await conn.execute(
       'SELECT id FROM users WHERE username = ? AND password = ? AND active = 1',
@@ -32,54 +29,49 @@ export async function GET(request, { params }) {
     );
     
     if (users.length === 0) {
-      console.log('❌ Auth failed');
       await conn.end();
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    console.log('✅ Auth OK');
-
     // Get stream
     const [streams] = await conn.execute(
-      'SELECT stream_source, direct_source, name FROM streams WHERE id = ? AND active = 1 LIMIT 1',
+      'SELECT stream_source, direct_source FROM streams WHERE id = ? AND active = 1',
       [streamId]
     );
 
     await conn.end();
 
     if (streams.length === 0) {
-      console.log('❌ Stream not found:', streamId);
-      return new NextResponse('Stream not found', { status: 404 });
+      return new NextResponse('Not found', { status: 404 });
     }
 
     const streamUrl = streams[0].stream_source || streams[0].direct_source;
     
     if (!streamUrl) {
-      console.log('❌ No URL for stream:', streamId);
-      return new NextResponse('Stream URL not available', { status: 404 });
+      return new NextResponse('No URL', { status: 404 });
     }
 
-    console.log('✅ Redirecting to:', streamUrl.substring(0, 50) + '...');
-    
-    // Use 302 temporary redirect
-    return Response.redirect(streamUrl, 302);
+    // Use 302 redirect with minimal headers for old box compatibility
+    return new Response(null, {
+      status: 302,
+      headers: {
+        'Location': streamUrl,
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    });
 
   } catch (error) {
-    console.error('❌ Stream error:', error.message);
+    console.error('Stream error:', error);
     if (conn) {
       try { await conn.end(); } catch (e) {}
     }
-    return new NextResponse('Server error: ' + error.message, { status: 500 });
+    return new NextResponse('Error', { status: 500 });
   }
 }
 
-// Handle OPTIONS for CORS
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-    }
-  });
+// Handle HEAD requests (some boxes check this first)
+export async function HEAD(request, { params }) {
+  return GET(request, { params });
 }

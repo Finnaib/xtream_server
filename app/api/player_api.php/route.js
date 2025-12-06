@@ -1,11 +1,11 @@
 // File Location: app/api/player_api.php/route.js
-// Returns DIRECT stream URLs for maximum compatibility
+// Xtream API optimized for old MPEG4 boxes
 
 import { NextResponse } from 'next/server';
 import { authenticateUser } from '../../../lib/auth.js';
 import { getConnection } from '../../../lib/db.js';
 
-async function getStreamsWithDirectURLs(type, categoryId = null) {
+async function getStreamsForXtream(type, categoryId, username, password, serverUrl) {
   const conn = await getConnection();
   
   let query = 'SELECT * FROM streams WHERE type = ? AND active = ?';
@@ -19,8 +19,12 @@ async function getStreamsWithDirectURLs(type, categoryId = null) {
   const [rows] = await conn.execute(query, params);
   
   return rows.map(stream => {
-    // Use the ACTUAL stream URL from M3U file
-    const directUrl = stream.stream_source || stream.direct_source || '';
+    const streamSource = stream.stream_source || stream.direct_source || '';
+    
+    // Determine extension
+    let ext = 'ts';
+    if (streamSource.includes('.m3u8')) ext = 'm3u8';
+    else if (streamSource.includes('.mp4')) ext = 'mp4';
     
     return {
       num: stream.id,
@@ -31,14 +35,13 @@ async function getStreamsWithDirectURLs(type, categoryId = null) {
       epg_channel_id: stream.epg_channel_id || "",
       added: stream.created_at ? Math.floor(new Date(stream.created_at).getTime() / 1000) : "",
       category_id: stream.category_id?.toString() || "",
-      custom_sid: stream.custom_sid || "",
-      tv_archive: stream.tv_archive || 0,
-      direct_source: directUrl, // ACTUAL stream URL
-      tv_archive_duration: stream.tv_archive_duration || 0,
+      custom_sid: "",
+      tv_archive: 0,
+      direct_source: streamSource, // Direct URL
+      tv_archive_duration: 0,
       rating: stream.rating?.toString() || "0",
       rating_5based: parseFloat((stream.rating || 0) / 2).toFixed(1),
-      container_extension: stream.container_extension || "m3u8",
-      tmdb_id: stream.tmdb_id || ""
+      container_extension: ext
     };
   });
 }
@@ -53,7 +56,7 @@ async function getCategories(type) {
   return rows.map(cat => ({
     category_id: cat.id.toString(),
     category_name: cat.name,
-    parent_id: cat.parent_id || 0
+    parent_id: 0
   }));
 }
 
@@ -85,12 +88,12 @@ export async function GET(request) {
     switch (action) {
       case 'get_live_streams':
         const categoryId = searchParams.get('category_id');
-        const liveStreams = await getStreamsWithDirectURLs('live', categoryId);
+        const liveStreams = await getStreamsForXtream('live', categoryId, username, password, serverUrl);
         return NextResponse.json(liveStreams);
 
       case 'get_vod_streams':
         const vodCategoryId = searchParams.get('category_id');
-        const vodStreams = await getStreamsWithDirectURLs('movie', vodCategoryId);
+        const vodStreams = await getStreamsForXtream('movie', vodCategoryId, username, password, serverUrl);
         return NextResponse.json(vodStreams);
 
       case 'get_series':
@@ -114,7 +117,7 @@ export async function GET(request) {
       case 'get_vod_info':
         const vodId = searchParams.get('vod_id');
         if (!vodId) {
-          return NextResponse.json({ error: 'vod_id required' }, { status: 400 });
+          return NextResponse.json({ info: {}, movie_data: {} });
         }
         
         const conn = await getConnection();
@@ -128,11 +131,9 @@ export async function GET(request) {
         }
         
         const movie = movies[0];
-        const streamSource = movie.stream_source || movie.direct_source || '';
         
         return NextResponse.json({
           info: {
-            tmdb_id: movie.tmdb_id || "",
             name: movie.name,
             cover_big: movie.icon || "",
             rating: movie.rating || 0
@@ -140,9 +141,8 @@ export async function GET(request) {
           movie_data: {
             stream_id: movie.id,
             name: movie.name,
-            added: movie.created_at ? Math.floor(new Date(movie.created_at).getTime() / 1000) : "",
             container_extension: movie.container_extension || "mp4",
-            direct_source: streamSource
+            direct_source: movie.stream_source || movie.direct_source || ""
           }
         });
 
@@ -150,28 +150,27 @@ export async function GET(request) {
         return NextResponse.json({ epg_listings: [] });
 
       default:
-        // User info
+        // User info - simplified for old boxes
         return NextResponse.json({
           user_info: {
             username: user.username,
             password: user.password,
-            message: user.message || "",
+            message: "",
             auth: 1,
-            status: user.status || "active",
-            exp_date: user.exp_date ? Math.floor(new Date(user.exp_date).getTime() / 1000) : null,
-            is_trial: user.is_trial ? "1" : "0",
+            status: "Active",
+            exp_date: user.exp_date ? Math.floor(new Date(user.exp_date).getTime() / 1000) : "1924905600",
+            is_trial: "0",
             active_cons: "0",
-            created_at: user.created_at ? Math.floor(new Date(user.created_at).getTime() / 1000) : null,
-            max_connections: user.max_connections?.toString() || "1",
-            allowed_output_formats: ["m3u8", "ts", "rtmp", "mp4"]
+            created_at: user.created_at ? Math.floor(new Date(user.created_at).getTime() / 1000) : Math.floor(Date.now() / 1000),
+            max_connections: user.max_connections?.toString() || "5",
+            allowed_output_formats: ["ts", "m3u8"]
           },
           server_info: {
-            url: serverUrl,
+            url: serverUrl.replace('https://', '').replace('http://', ''),
             port: "80",
             https_port: "443",
-            server_protocol: serverUrl.includes('https') ? 'https' : 'http',
+            server_protocol: "http",
             rtmp_port: "1935",
-            timezone: "UTC",
             timestamp_now: Math.floor(Date.now() / 1000),
             time_now: new Date().toISOString()
           }
@@ -180,8 +179,7 @@ export async function GET(request) {
   } catch (error) {
     console.error('API Error:', error);
     return NextResponse.json({ 
-      error: 'Internal server error',
-      message: error.message 
+      user_info: { auth: 0, message: 'Error' } 
     }, { status: 500 });
   }
 }
