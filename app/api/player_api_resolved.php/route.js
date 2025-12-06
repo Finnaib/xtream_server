@@ -1,5 +1,5 @@
-// File Location: app/api/player_api.php/route.js
-// Xtream API that resolves redirects for IPTV apps and old boxes
+// File Location: app/api/player_api_resolved.php/route.js
+// Xtream API that ALWAYS resolves redirects
 
 export const dynamic = 'force-dynamic';
 
@@ -7,27 +7,23 @@ import { NextResponse } from 'next/server';
 import { authenticateUser } from '../../../lib/auth.js';
 import { getConnection } from '../../../lib/db.js';
 
-// Resolve redirect URLs to final stream URLs
 async function resolveRedirect(url) {
   try {
     const response = await fetch(url, {
       method: 'HEAD',
       redirect: 'follow',
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'User-Agent': 'Mozilla/5.0',
         'Accept': '*/*'
       }
     });
-    
-    // Return final URL after all redirects
     return response.url;
   } catch (error) {
-    console.error('Redirect resolve error:', error);
-    return url; // Return original if resolution fails
+    return url;
   }
 }
 
-async function getStreamsForXtream(type, categoryId, resolveUrls = false) {
+async function getStreamsResolved(type, categoryId) {
   const conn = await getConnection();
   
   let query = 'SELECT * FROM streams WHERE type = ? AND active = ?';
@@ -40,12 +36,11 @@ async function getStreamsForXtream(type, categoryId, resolveUrls = false) {
   
   const [rows] = await conn.execute(query, params);
   
-  // Process streams
   const streams = await Promise.all(rows.map(async (stream) => {
     let streamUrl = stream.stream_source || stream.direct_source || '';
     
-    // Resolve redirects if requested
-    if (resolveUrls && streamUrl) {
+    // ALWAYS resolve redirects
+    if (streamUrl) {
       streamUrl = await resolveRedirect(streamUrl);
     }
     
@@ -70,11 +65,7 @@ async function getStreamsForXtream(type, categoryId, resolveUrls = false) {
 
 async function getCategories(type) {
   const conn = await getConnection();
-  const [rows] = await conn.execute(
-    'SELECT * FROM categories WHERE type = ?',
-    [type]
-  );
-  
+  const [rows] = await conn.execute('SELECT * FROM categories WHERE type = ?', [type]);
   return rows.map(cat => ({
     category_id: cat.id.toString(),
     category_name: cat.name,
@@ -89,99 +80,50 @@ export async function GET(request) {
     const username = searchParams.get('username');
     const password = searchParams.get('password');
     const action = searchParams.get('action');
-    const resolve = searchParams.get('resolve') === 'yes'; // Optional: resolve redirects
-
     const serverUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000';
 
-    // Authenticate
     if (!username || !password) {
-      return NextResponse.json({ 
-        user_info: { auth: 0, message: 'Invalid credentials' } 
-      }, { status: 401 });
+      return NextResponse.json({ user_info: { auth: 0 } }, { status: 401 });
     }
 
     const user = await authenticateUser(username, password);
     if (!user) {
-      return NextResponse.json({ 
-        user_info: { auth: 0, message: 'Invalid credentials' } 
-      }, { status: 401 });
+      return NextResponse.json({ user_info: { auth: 0 } }, { status: 401 });
     }
 
-    // Handle actions
     switch (action) {
       case 'get_live_streams':
         const categoryId = searchParams.get('category_id');
-        const liveStreams = await getStreamsForXtream('live', categoryId, resolve);
+        const liveStreams = await getStreamsResolved('live', categoryId);
         return NextResponse.json(liveStreams);
 
       case 'get_vod_streams':
         const vodCategoryId = searchParams.get('category_id');
-        const vodStreams = await getStreamsForXtream('movie', vodCategoryId, resolve);
+        const vodStreams = await getStreamsResolved('movie', vodCategoryId);
         return NextResponse.json(vodStreams);
 
       case 'get_series':
         return NextResponse.json([]);
 
       case 'get_live_categories':
-        const liveCategories = await getCategories('live');
-        return NextResponse.json(liveCategories);
+        return NextResponse.json(await getCategories('live'));
 
       case 'get_vod_categories':
-        const vodCategories = await getCategories('movie');
-        return NextResponse.json(vodCategories);
+        return NextResponse.json(await getCategories('movie'));
 
       case 'get_series_categories':
-        const seriesCategories = await getCategories('series');
-        return NextResponse.json(seriesCategories);
+        return NextResponse.json(await getCategories('series'));
 
       case 'get_series_info':
-        return NextResponse.json({ seasons: [], info: {}, episodes: {} });
-
       case 'get_vod_info':
-        const vodId = searchParams.get('vod_id');
-        if (!vodId) {
-          return NextResponse.json({ info: {}, movie_data: {} });
-        }
-        
-        const conn = await getConnection();
-        const [movies] = await conn.execute(
-          'SELECT * FROM streams WHERE id = ? AND type = ?',
-          [vodId, 'movie']
-        );
-        
-        if (movies.length === 0) {
-          return NextResponse.json({ info: {}, movie_data: {} });
-        }
-        
-        const movie = movies[0];
-        let movieUrl = movie.stream_source || movie.direct_source || '';
-        
-        if (resolve && movieUrl) {
-          movieUrl = await resolveRedirect(movieUrl);
-        }
-        
-        return NextResponse.json({
-          info: {
-            name: movie.name,
-            cover_big: movie.icon || ""
-          },
-          movie_data: {
-            stream_id: movie.id,
-            name: movie.name,
-            direct_source: movieUrl
-          }
-        });
-
       case 'get_short_epg':
-        return NextResponse.json({ epg_listings: [] });
+        return NextResponse.json({});
 
       default:
-        // User info
         return NextResponse.json({
           user_info: {
             username: user.username,
             password: user.password,
-            message: "",
             auth: 1,
             status: "Active",
             exp_date: "1924905600",
@@ -203,9 +145,6 @@ export async function GET(request) {
         });
     }
   } catch (error) {
-    console.error('API Error:', error);
-    return NextResponse.json({ 
-      user_info: { auth: 0, message: 'Error' } 
-    }, { status: 500 });
+    return NextResponse.json({ user_info: { auth: 0 } }, { status: 500 });
   }
 }

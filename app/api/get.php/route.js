@@ -1,5 +1,7 @@
 // File Location: app/api/get.php/route.js
-// Generate M3U playlist with BOTH direct URLs and server URLs
+// Generate M3U playlist with direct stream URLs
+
+export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { authenticateUser } from '../../../lib/auth.js';
@@ -13,7 +15,7 @@ export async function GET(request) {
     const password = searchParams.get('password');
     const type = searchParams.get('type') || 'm3u';
     const output = searchParams.get('output') || 'ts';
-    const direct = searchParams.get('direct') || 'no'; // Option to use direct URLs
+    const direct = searchParams.get('direct') || 'no';
 
     // Authenticate user
     if (!username || !password) {
